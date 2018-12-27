@@ -4,7 +4,6 @@ namespace File;
 
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
-use \APCu\Cache\APCUserCache;
 
 /**
  * @author Gabriel Polverini <polverini.gabriel@gmail.com>
@@ -15,10 +14,12 @@ class FileGetContentsTest extends TestCase
 {
     const URL_TEST = 'https://mxusphls2.clarovideo.com/multimediav81/plataforma_vod/MP4/201806/MAH002699_full/MAH002699_full_SS_HLSFPS.ism/MAH002699_full_SS_HLSFPS.m3u8';
     protected $logger;
+    protected $cache;
 
     public function setUp()
     {
         $this->logger = $this->prophesize('Psr\Log\LoggerInterface');
+        $this->cache = $this->prophesize('Psr\SimpleCache\CacheInterface');
         $this->logger->info(Argument::any(), Argument::any())->willReturn('');
     }
 
@@ -111,15 +112,38 @@ class FileGetContentsTest extends TestCase
      */
     public function testGetWithCache()
     {
+        $this->cache->get(Argument::any(), Argument::any())->willReturn(null);
+        $this->cache->set(Argument::any(), Argument::any(), Argument::any())->willReturn();
+
         $file_get_contents = new FileGetContents($this->logger->reveal());
         $ret = $file_get_contents->get(self::URL_TEST, [
             $file_get_contents::CACHE => [
                 $file_get_contents::ENABLED => true,
                 $file_get_contents::TTL => 5,
-                $file_get_contents::INSTANCE => new APCUserCache()
+                $file_get_contents::INSTANCE => $this->cache->reveal()
             ]
         ]);
 
         $this->assertNotNull($ret);
+    }
+
+    /**
+     * @test
+     */
+    public function testGetInCache()
+    {
+        $value = 'test';
+        $this->cache->get(Argument::any(), Argument::any())->willReturn($value);
+
+        $file_get_contents = new FileGetContents($this->logger->reveal());
+        $ret = $file_get_contents->get(self::URL_TEST, [
+            $file_get_contents::CACHE => [
+                $file_get_contents::ENABLED => true,
+                $file_get_contents::TTL => 5,
+                $file_get_contents::INSTANCE => $this->cache->reveal()
+            ]
+        ]);
+
+        $this->assertEquals($ret, $value);
     }
 }
