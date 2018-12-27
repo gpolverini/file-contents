@@ -56,7 +56,7 @@ class FileGetContents implements FileGetContentsInterface
 
             $this->setCache($this->config[self::CACHE][self::INSTANCE]);
             $ret = $this->cache->get($url);
-            if ($ret === false) {
+            if (is_null($ret)) {
                 $ret = $this->fileGetContents($url);
                 $this->cache->set($url, $ret, $ttl);
             }
