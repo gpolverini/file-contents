@@ -21,36 +21,44 @@ class FileGetContents implements FileGetContentsInterface
     const TIMEOUT_S = 'timeout_s';
     const ENDPOINT = 'endpoint';
 
-    const MSG_FILE_ERROR = 'Error retrieving file %s.' . PHP_EOL . 'Either the file doesn\'t exist or timed out';
-    const MSG_FILE_EMPTY = 'File is empty';
-
-    protected $config;
+    protected $config = [];
     protected $default_timeout = 20;
     protected $default_ttl = 5;
 
+    /**
+     * FileGetContents constructor.
+     * @param LoggerInterface $logger
+     */
     public function __construct(LoggerInterface $logger)
     {
         $this->setLogger($logger);
     }
 
     /**
+     * isEnabledCache.
+     * @return bool
+     */
+    private function isEnabledCache()
+    {
+        return array_key_exists(self::CACHE, $this->config)
+            && array_key_exists(self::ENABLED, $this->config[self::CACHE])
+            && filter_var($this->config[self::CACHE][self::ENABLED],FILTER_VALIDATE_BOOLEAN)
+            && array_key_exists(self::INSTANCE, $this->config[self::CACHE])
+            && $this->config[self::CACHE][self::INSTANCE] instanceof CacheInterface;
+    }
+
+    /**
      * customFileGetContents.
-     *
-     * @param string $url
-     *
-     * @return string
-     *
+     * @param $url
+     * @return bool|mixed|string
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     private function customFileGetContents($url)
     {
-        if (array_key_exists(self::CACHE, $this->config)
-            && array_key_exists(self::ENABLED, $this->config[self::CACHE])
-            && array_key_exists(self::INSTANCE, $this->config[self::CACHE])
-            && $this->config[self::CACHE][self::INSTANCE] instanceof CacheInterface) {
-
+        if ($this->isEnabledCache()) {
             $ttl = $this->default_ttl;
-            if (array_key_exists(self::TTL, $this->config[self::CACHE])) {
+            if (array_key_exists(self::TTL, $this->config[self::CACHE])
+                && is_numeric($this->config[self::CACHE][self::TTL])) {
                 $ttl = $this->config[self::CACHE][self::TTL];
             }
 
@@ -68,28 +76,26 @@ class FileGetContents implements FileGetContentsInterface
 
     /**
      * fileGetContents.
-     *
      * @param $url
      * @return bool|string
      */
     private function fileGetContents($url)
     {
         $timeout = $this->default_timeout;
-        if (array_key_exists(self::TIMEOUT_S, $this->config)) {
+        if (array_key_exists(self::TIMEOUT_S, $this->config)
+            && is_numeric($this->config[self::TIMEOUT_S])) {
             $timeout = $this->config[self::TIMEOUT_S];
         }
         $ctx = stream_context_create(array('http'=> array('timeout' => $timeout)));
         return file_get_contents($url, false, $ctx);
     }
 
+
     /**
      * get.
-     *
-     * @param string $url
+     * @param $url
      * @param array $config
-     *
-     * @return string
-     *
+     * @return bool|mixed|string
      * @throws FileGetContentsException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
@@ -105,16 +111,18 @@ class FileGetContents implements FileGetContentsInterface
             $url = (array_key_exists(self::ENDPOINT, $this->config) ? $this->config[self::ENDPOINT] : '') . $url;
         }
 
-        $this->logger->info('ORIGINAL FILE:', [$url]);
+        $this->logger->info("ORIGINAL FILE: $url");
 
         $ret = @$this->customFileGetContents($url);
 
         if ($ret === false) {
-            throw new FileGetContentsException(sprintf(self::MSG_FILE_ERROR, "[$url]"));
+            throw new FileGetContentsException(
+                "Error retrieving file [$url].\nEither the file doesn\'t exist or timed out"
+            );
         }
 
         if (empty($ret)) {
-            throw new FileGetContentsException(self::MSG_FILE_EMPTY);
+            throw new FileGetContentsException('File is empty');
         }
 
         return $ret;

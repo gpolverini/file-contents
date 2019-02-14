@@ -80,12 +80,13 @@ class FileGetContentsTest extends TestCase
     public function testGetTimeOutException()
     {
         $file_get_contents = new FileGetContents($this->logger->reveal());
+        $url = self::URL_TEST;
         try {
-            $file_get_contents->get(self::URL_TEST, [$file_get_contents::TIMEOUT_S => 0]);
+            $file_get_contents->get($url, [$file_get_contents::TIMEOUT_S => 0]);
         } catch (\Exception $ex) {
             $this->assertTrue(
                 $ex instanceof FileGetContentsException
-                && $ex->getMessage() == sprintf($file_get_contents::MSG_FILE_ERROR, "[".self::URL_TEST."]")
+                && $ex->getMessage() == "Error retrieving file [$url].\nEither the file doesn\'t exist or timed out"
             );
         }
     }
@@ -102,7 +103,7 @@ class FileGetContentsTest extends TestCase
         } catch (\Exception $ex) {
             $this->assertTrue(
                 $ex instanceof FileGetContentsException
-                && $ex->getMessage() == $file_get_contents::MSG_FILE_EMPTY
+                && $ex->getMessage() == 'File is empty'
             );
         }
     }
