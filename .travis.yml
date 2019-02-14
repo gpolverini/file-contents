@@ -8,7 +8,6 @@ php:
   - 7.1snapshot
   - 7.2
   - 7.2snapshot
-  - master
 
 sudo: false
 
@@ -17,7 +16,6 @@ before_install:
   - composer clear-cache
   - if [[ "$(php -v | grep 'PHP 5')" ]]; then yes | pecl install -f apcu-4.0.8; fi
   - if [[ "$(php -v | grep 'PHP 7')" ]]; then yes | pecl install -f apcu; fi
-  - if [[ "$(php -v | grep 'PHP 8')" ]]; then yes | pecl install -f apcu; fi
   - echo "extension=apcu.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   - echo "apc.enable_cli=1" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
 
