@@ -8,7 +8,6 @@ php:
   - 7.1snapshot
   - 7.2
   - 7.2snapshot
-  - master
 
 sudo: false
 
